@@ -13,7 +13,7 @@
 
 1.  **リポジトリのクローン**
     ```bash
-    git clone https://github.com/dokkiichan/BridgeMe-Back.git
+    git clone https://github.com/StepByCode/BridgeMe.git
     cd BridgeMe-Back
     ```
 
