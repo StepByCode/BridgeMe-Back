@@ -1,0 +1,144 @@
+openapi: 3.0.0
+info:
+  title: BridgeMe API
+  description: BridgeMeで使用するAPIのドキュメントです。
+  version: "1.0"
+  contact: {}
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.bridgeme.com
+security: []
+paths:
+  /profiles:
+    post:
+      summary: 新しいプロフィールを作成する
+      description: 入力された情報で新しいプロフィールを作成します
+      operationId: createProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '201':
+          description: 作成したIDを返します
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: プロフィールのUUID
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: string
+    get:
+      summary: 全プロフィールの一覧を取得する
+      description: すべてのプロフィール一覧を取得します
+      operationId: getProfiles
+      responses:
+        '200':
+          description: プロフィール一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProfileInput'
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: string
+  /profiles/{id}:
+    get:
+      summary: 指定したIDのプロフィール情報を取得する
+      description: 指定したIDのプロフィール情報を取得します
+      operationId: getProfileById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: プロフィールのUUID
+      responses:
+        '200':
+          description: プロフィール情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileInput'
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: 見つかりません
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: string
+components:
+  schemas:
+    ProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 氏名
+        affiliation:
+          type: string
+          description: 所属
+        bio:
+          type: string
+          description: 一言
+        instagram_id:
+          type: string
+          description: Instagram ID
+        twitter_id:
+          type: string
+          description: Twitter (X) ID
+    Profile:
+      allOf:
+        - $ref: '#/components/schemas/ProfileInput'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: プロフィールのUUID
+            created_at:
+              type: string
+              format: date-time
+              description: 作成日時

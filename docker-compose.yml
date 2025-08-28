@@ -37,5 +37,16 @@ services:
     depends_on:
       - mongo
 
+  swagger-ui:
+    image: nginx:latest
+    container_name: swagger-ui
+    ports:
+      - "8082:80"
+    volumes:
+      - ./docs/swagger-ui:/usr/share/nginx/html
+      - ./docs/openapi.yaml:/usr/share/nginx/html/openapi.yaml
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    command: nginx -g 'daemon off;'
+
 volumes:
   mongo-data:
