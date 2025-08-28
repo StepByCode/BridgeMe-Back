@@ -41,14 +41,15 @@ func (c *ProfileController) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdProfile)
+	response := map[string]string{"id": createdProfile.ID}
+	json.NewEncoder(w).Encode(response)
 }
 
 // @Summary Get a profile by ID
 // @Description Get a single profile by its ID
 // @Produce  json
 // @Param   id   path      string  true  "Profile ID"
-// @Success 200  {object}  domain.Profile
+// @Success 200  {object}  object
 // @Failure 400  {object}  string
 // @Failure 404  {object}  string
 // @Failure 500  {object}  string
@@ -72,13 +73,26 @@ func (c *ProfileController) Show(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(profile)
+	responseProfile := struct {
+		Name        string `json:"name"`
+		Affiliation string `json:"affiliation"`
+		Bio         string `json:"bio"`
+		InstagramID string `json:"instagram_id"`
+		TwitterID   string `json:"twitter_id"`
+	}{
+		Name:        profile.Name,
+		Affiliation: profile.Affiliation,
+		Bio:         profile.Bio,
+		InstagramID: profile.InstagramID,
+		TwitterID:   profile.TwitterID,
+	}
+	json.NewEncoder(w).Encode(responseProfile)
 }
 
 // @Summary Get all profiles
 // @Description Get a list of all profiles
 // @Produce  json
-// @Success 200  {array}   domain.Profile
+// @Success 200  {array}   object
 // @Failure 500  {object}  string
 // @Router /profiles [get]
 func (c *ProfileController) Index(w http.ResponseWriter, r *http.Request) {
@@ -89,5 +103,27 @@ func (c *ProfileController) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(profiles)
+	var responseProfiles []struct {
+		Name        string `json:"name"`
+		Affiliation string `json:"affiliation"`
+		Bio         string `json:"bio"`
+		InstagramID string `json:"instagram_id"`
+		TwitterID   string `json:"twitter_id"`
+	}
+	for _, p := range profiles {
+		responseProfiles = append(responseProfiles, struct {
+			Name        string `json:"name"`
+			Affiliation string `json:"affiliation"`
+			Bio         string `json:"bio"`
+			InstagramID string `json:"instagram_id"`
+			TwitterID   string `json:"twitter_id"`
+		}{
+			Name:        p.Name,
+			Affiliation: p.Affiliation,
+			Bio:         p.Bio,
+			InstagramID: p.InstagramID,
+			TwitterID:   p.TwitterID,
+		})
+	}
+	json.NewEncoder(w).Encode(responseProfiles)
 }

@@ -5,20 +5,13 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/dokkiichan/BridgeMe-Back/docs"
 	"github.com/dokkiichan/BridgeMe-Back/infrastructure/datastore"
 	"github.com/dokkiichan/BridgeMe-Back/interfaces/controllers"
 	"github.com/dokkiichan/BridgeMe-Back/interfaces/repositories"
 	"github.com/dokkiichan/BridgeMe-Back/usecase"
 	"github.com/gorilla/mux"
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-// @title BridgeMe API
-// @version 1.0
-// @description This is a simple profile service API.
-// @host localhost:8080
-// @BasePath /
 func main() {
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {
@@ -39,8 +32,6 @@ func main() {
 	r.HandleFunc("/profiles", profileController.Create).Methods("POST")
 	r.HandleFunc("/profiles/{id}", profileController.Show).Methods("GET")
 	r.HandleFunc("/profiles", profileController.Index).Methods("GET")
-
-	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

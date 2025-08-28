@@ -47,7 +47,7 @@
 
 Goバックエンドが起動している状態で、以下のURLにアクセスするとAPIドキュメント（Swagger UI）を確認できます。
 
--   **Swagger UI:** `http://localhost:8080/swagger/index.html`
+-   **Swagger UI:** `http://localhost:8082`
 
 ## Mongo Express (MongoDB管理画面)
 
@@ -64,5 +64,42 @@ MongoDBが起動している状態で、以下のURLにアクセスするとMong
 | `POST`   | `/profiles`    | プロフィールの作成 |
 | `GET`    | `/profiles/{id}` | 特定のプロフィールを取得 |
 | `GET`    | `/profiles`    | 全てのプロフィールを取得 |
+
+## バックエンド構成
+
+```mermaid
+graph LR
+    subgraph Application
+        main.go --> controllers
+        main.go --> interactors
+        main.go --> repositories_impl
+        main.go --> db
+    end
+
+    subgraph Interfaces
+        controllers --> interactors
+        repositories_impl --> db
+    end
+
+    subgraph Usecase
+        interactors --> repositories_interface
+    end
+
+    subgraph Domain
+        repositories_interface --> domain_profile
+        interactors --> domain_profile
+    end
+
+    subgraph Infrastructure
+        db
+    end
+
+    domain_profile[domain/profile.go]
+    repositories_interface[usecase/profile_repository.go]
+    interactors[usecase/profile_interactor.go]
+    controllers[interfaces/controllers/profile_controller.go]
+    repositories_impl[interfaces/repositories/profile_repository.go]
+    db[infrastructure/datastore/db.go]
+```
 
 ---
