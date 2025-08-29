@@ -74,38 +74,24 @@ MongoDBが起動している状態で、以下のURLにアクセスするとMong
 ## バックエンド構成
 
 ```mermaid
-graph LR
-    subgraph Application
-        main.go --> controllers
-        main.go --> interactors
-        main.go --> repositories_impl
-        main.go --> db
-    end
+graph TD
+    subgraph System Overview
+        subgraph backend_container [Backend Container]
+            direction LR
+            cmd_main[cmd/main.go] --> internal_interfaces[internal/interfaces]
+            internal_interfaces --> internal_usecase[internal/usecase]
+            internal_usecase --> internal_domain[internal/domain]
+            internal_usecase --> internal_infrastructure[internal/infrastructure]
+            internal_interfaces --> internal_infrastructure
+        end
 
-    subgraph Interfaces
-        controllers --> interactors
-        repositories_impl --> db
-    end
+        mongo_container[Mongo Container]
+        mongo_express_container[Mongo Express Container]
+        swagger_ui_container[Swagger UI Container]
 
-    subgraph Usecase
-        interactors --> repositories_interface
+        backend_container --> mongo_container
+        mongo_express_container --> mongo_container
+        backend_container -- serves API --> swagger_ui_container
     end
-
-    subgraph Domain
-        repositories_interface --> domain_profile
-        interactors --> domain_profile
-    end
-
-    subgraph Infrastructure
-        db
-    end
-
-    domain_profile[domain/profile.go]
-    repositories_interface[usecase/profile_repository.go]
-    interactors[usecase/profile_interactor.go]
-    controllers[interfaces/controllers/profile_controller.go]
-    repositories_impl[interfaces/repositories/profile_repository.go]
-    db[infrastructure/datastore/db.go]
 ```
 
----
