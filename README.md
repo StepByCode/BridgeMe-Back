@@ -76,36 +76,38 @@ MongoDBが起動している状態で、以下のURLにアクセスするとMong
 ```mermaid
 graph LR
     subgraph Application
-        main.go --> controllers
-        main.go --> interactors
-        main.go --> repositories_impl
-        main.go --> db
+        cmd_main[cmd/main.go] --> internal_controllers[internal/interfaces/controllers]
+        cmd_main --> internal_interactors[internal/usecase]
+        cmd_main --> internal_repositories_impl[internal/interfaces/repositories]
+        cmd_main --> internal_db[internal/infrastructure/datastore]
     end
 
-    subgraph Interfaces
-        controllers --> interactors
-        repositories_impl --> db
+    subgraph Internal Structure
+        subgraph Interfaces
+            internal_controllers --> internal_interactors
+            internal_repositories_impl --> internal_db
+        end
+
+        subgraph Usecase
+            internal_interactors --> internal_repositories_interface[internal/usecase]
+        end
+
+        subgraph Domain
+            internal_repositories_interface --> internal_domain_profile[internal/domain]
+            internal_interactors --> internal_domain_profile
+        end
+
+        subgraph Infrastructure
+            internal_db
+        end
     end
 
-    subgraph Usecase
-        interactors --> repositories_interface
-    end
-
-    subgraph Domain
-        repositories_interface --> domain_profile
-        interactors --> domain_profile
-    end
-
-    subgraph Infrastructure
-        db
-    end
-
-    domain_profile[domain/profile.go]
-    repositories_interface[usecase/profile_repository.go]
-    interactors[usecase/profile_interactor.go]
-    controllers[interfaces/controllers/profile_controller.go]
-    repositories_impl[interfaces/repositories/profile_repository.go]
-    db[infrastructure/datastore/db.go]
+    internal_domain_profile[internal/domain/profile.go]
+    internal_repositories_interface[internal/usecase/profile_repository.go]
+    internal_interactors[internal/usecase/profile_interactor.go]
+    internal_controllers[internal/interfaces/controllers/profile_controller.go]
+    internal_repositories_impl[internal/interfaces/repositories/profile_repository.go]
+    internal_db[internal/infrastructure/datastore/db.go]
 ```
 
 ---
