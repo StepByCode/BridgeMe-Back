@@ -2,5 +2,5 @@
 
 package main
 
-//go:generate oapi-codegen --config=codegen.yaml api/openapi.yaml
+//go:generate oapi-codegen --config=api/codegen.yaml api/openapi.yaml
 func main() {}

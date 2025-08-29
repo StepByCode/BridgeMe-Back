@@ -1,6 +1,0 @@
-
-package: generated
-generate:
-  - types
-  - server
-output: interfaces/generated/types.go
