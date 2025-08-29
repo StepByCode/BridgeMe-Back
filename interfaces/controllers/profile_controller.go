@@ -11,10 +11,10 @@ import (
 )
 
 type ProfileController struct {
-	Interactor usecase.ProfileInteractor
+	Interactor usecase.ProfileInteractorInterface
 }
 
-func NewProfileController(interactor usecase.ProfileInteractor) *ProfileController {
+func NewProfileController(interactor usecase.ProfileInteractorInterface) *ProfileController {
 	return &ProfileController{Interactor: interactor}
 }
 

@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+type ProfileInteractorInterface interface {
+	CreateProfile(profile *domain.Profile) (*domain.Profile, error)
+	GetProfile(id string) (*domain.Profile, error)
+	GetAllProfiles() ([]*domain.Profile, error)
+}
+
 type ProfileInteractor struct {
 	ProfileRepository ProfileRepository
 }
