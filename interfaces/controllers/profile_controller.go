@@ -34,15 +34,15 @@ func (c *ProfileController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createdProfile, err := c.Interactor.CreateProfile(&profile)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	validate := validator.New()
 	if err := validate.Struct(profile); err != nil {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	createdProfile, err := c.Interactor.CreateProfile(&profile)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
