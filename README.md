@@ -40,7 +40,7 @@
 `docker-compose up` コマンドで全てのサービスが起動します。
 
 -   **Goバックエンド:** `http://localhost:8080`
--   **MongoDB:** `localhost:27017` (Dockerコンテナ内部からアクセス)
+-   **MongoDB:** `localhost:2701` (Dockerコンテナ内部からアクセス)
 -   **Mongo Express:** `http://localhost:8081`
 
 ## APIドキュメント (OpenAPI / Swagger UI)
