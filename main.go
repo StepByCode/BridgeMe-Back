@@ -26,7 +26,7 @@ func main() {
 
 	profileRepository := repositories.NewProfileRepository(db)
 	profileInteractor := usecase.NewProfileInteractor(profileRepository)
-	profileController := controllers.NewProfileController(*profileInteractor)
+	profileController := controllers.NewProfileController(profileInteractor)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/profiles", profileController.Create).Methods("POST")
