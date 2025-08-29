@@ -6,6 +6,7 @@ import (
 
 	"github.com/dokkiichan/BridgeMe-Back/domain"
 	"github.com/dokkiichan/BridgeMe-Back/usecase"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
@@ -36,6 +37,12 @@ func (c *ProfileController) Create(w http.ResponseWriter, r *http.Request) {
 	createdProfile, err := c.Interactor.CreateProfile(&profile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	validate := validator.New()
+	if err := validate.Struct(profile); err != nil {
+		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
