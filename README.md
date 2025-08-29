@@ -75,14 +75,7 @@ MongoDBが起動している状態で、以下のURLにアクセスするとMong
 
 ```mermaid
 graph LR
-    subgraph Application
-        cmd_main[cmd/main.go] --> internal_controllers[internal/interfaces/controllers]
-        cmd_main --> internal_interactors[internal/usecase]
-        cmd_main --> internal_repositories_impl[internal/interfaces/repositories]
-        cmd_main --> internal_db[internal/infrastructure/datastore]
-    end
-
-    subgraph Internal Structure
+    subgraph internal
         subgraph Interfaces
             internal_controllers --> internal_interactors
             internal_repositories_impl --> internal_db
@@ -94,7 +87,7 @@ graph LR
 
         subgraph Domain
             internal_repositories_interface --> internal_domain_profile[internal/domain]
-            internal_interactors --> internal_domain_profile
+            internal_interactors --> internal_interactors
         end
 
         subgraph Infrastructure
@@ -108,6 +101,19 @@ graph LR
     internal_controllers[internal/interfaces/controllers/profile_controller.go]
     internal_repositories_impl[internal/interfaces/repositories/profile_repository.go]
     internal_db[internal/infrastructure/datastore/db.go]
+```
+
+## システム構成概要
+
+```mermaid
+graph TD
+    subgraph Services
+        backend --> mongo
+        mongo-express --> mongo
+        swagger-ui
+    end
+
+    backend -- serves API --> swagger-ui
 ```
 
 ---
