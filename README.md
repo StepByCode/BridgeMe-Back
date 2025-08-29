@@ -31,13 +31,13 @@
 3.  **Docker Compose の起動**
     以下のコマンドを実行すると、MongoDBとGoバックエンド、Mongo Expressが起動します。
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
     初回起動時やコード変更時には `--build` オプションが必要です。
 
 ## アプリケーションの実行
 
-`docker-compose up` コマンドで全てのサービスが起動します。
+`docker compose up` コマンドで全てのサービスが起動します。
 
 -   **Goバックエンド:** `http://localhost:8080`
 -   **MongoDB:** `localhost:27017` (Dockerコンテナ内部からアクセス)
