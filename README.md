@@ -74,46 +74,24 @@ MongoDBが起動している状態で、以下のURLにアクセスするとMong
 ## バックエンド構成
 
 ```mermaid
-graph LR
-    subgraph internal
-        subgraph Interfaces
-            internal_controllers --> internal_interactors
-            internal_repositories_impl --> internal_db
-        end
-
-        subgraph Usecase
-            internal_interactors --> internal_repositories_interface[internal/usecase]
-        end
-
-        subgraph Domain
-            internal_repositories_interface --> internal_domain_profile[internal/domain]
-            internal_interactors --> internal_interactors
-        end
-
-        subgraph Infrastructure
-            internal_db
-        end
-    end
-
-    internal_domain_profile[internal/domain/profile.go]
-    internal_repositories_interface[internal/usecase/profile_repository.go]
-    internal_interactors[internal/usecase/profile_interactor.go]
-    internal_controllers[internal/interfaces/controllers/profile_controller.go]
-    internal_repositories_impl[internal/interfaces/repositories/profile_repository.go]
-    internal_db[internal/infrastructure/datastore/db.go]
-```
-
-## システム構成概要
-
-```mermaid
 graph TD
-    subgraph Services
-        backend --> mongo
-        mongo-express --> mongo
-        swagger-ui
-    end
+    subgraph System Overview
+        subgraph backend_container [Backend Container]
+            direction LR
+            cmd_main[cmd/main.go] --> internal_interfaces[internal/interfaces]
+            internal_interfaces --> internal_usecase[internal/usecase]
+            internal_usecase --> internal_domain[internal/domain]
+            internal_usecase --> internal_infrastructure[internal/infrastructure]
+            internal_interfaces --> internal_infrastructure
+        end
 
-    backend -- serves API --> swagger-ui
+        mongo_container[Mongo Container]
+        mongo_express_container[Mongo Express Container]
+        swagger_ui_container[Swagger UI Container]
+
+        backend_container --> mongo_container
+        mongo_express_container --> mongo_container
+        backend_container -- serves API --> swagger_ui_container
+    end
 ```
 
----
