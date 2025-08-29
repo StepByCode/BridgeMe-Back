@@ -10,6 +10,7 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_DB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_DB_ROOT_PASSWORD}
+    command: mongod --port 27018
 
   backend:
     build:
