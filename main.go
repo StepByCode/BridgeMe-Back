@@ -2,14 +2,14 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/dokkiichan/BridgeMe-Back/infrastructure/datastore"
 	"github.com/dokkiichan/BridgeMe-Back/interfaces/controllers"
+	"github.com/dokkiichan/BridgeMe-Back/interfaces/generated"
 	"github.com/dokkiichan/BridgeMe-Back/interfaces/repositories"
 	"github.com/dokkiichan/BridgeMe-Back/usecase"
-	"github.com/gorilla/mux"
+	"github.com/labstack/echo/v4"
 )
 
 func main() {
@@ -28,10 +28,9 @@ func main() {
 	profileInteractor := usecase.NewProfileInteractor(profileRepository)
 	profileController := controllers.NewProfileController(profileInteractor)
 
-	r := mux.NewRouter()
-	r.HandleFunc("/profiles", profileController.Create).Methods("POST")
-	r.HandleFunc("/profiles/{id}", profileController.Show).Methods("GET")
-	r.HandleFunc("/profiles", profileController.Index).Methods("GET")
+	e := echo.New()
+
+	generated.RegisterHandlers(e, profileController)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -39,7 +38,7 @@ func main() {
 	}
 
 	log.Printf("Server starting on port %s", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	if err := e.Start(":" + port); err != nil {
 		log.Fatalf("Could not start server: %v", err)
 	}
 }

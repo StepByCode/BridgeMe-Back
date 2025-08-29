@@ -1,13 +1,13 @@
 package controllers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/dokkiichan/BridgeMe-Back/domain"
+	"github.com/dokkiichan/BridgeMe-Back/interfaces/generated"
 	"github.com/dokkiichan/BridgeMe-Back/usecase"
-	"github.com/go-playground/validator/v10"
-	"github.com/gorilla/mux"
+	"github.com/labstack/echo/v4"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type ProfileController struct {
@@ -18,119 +18,67 @@ func NewProfileController(interactor usecase.ProfileInteractorInterface) *Profil
 	return &ProfileController{Interactor: interactor}
 }
 
-// @Summary Create a new profile
-// @Description Create a new profile with the input payload
-// @Accept  json
-// @Produce  json
-// @Param   profile  body      domain.Profile  true  "Profile to create"
-// @Success 201      {object}  domain.Profile
-// @Failure 400      {object}  string
-// @Failure 500      {object}  string
-// @Router /profiles [post]
-func (c *ProfileController) Create(w http.ResponseWriter, r *http.Request) {
-	var profile domain.Profile
-	if err := json.NewDecoder(r.Body).Decode(&profile); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+// ensure ProfileController implements generated.ServerInterface
+var _ generated.ServerInterface = (*ProfileController)(nil)
+
+func (c *ProfileController) CreateProfile(ctx echo.Context) error {
+	var req generated.CreateProfileJSONRequestBody
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.String(http.StatusBadRequest, "Invalid request body")
 	}
 
-	validate := validator.New()
-	if err := validate.Struct(profile); err != nil {
-		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
-		return
+	profile := &domain.Profile{
+		Name:        *req.Name,
+		Affiliation: *req.Affiliation,
+		Bio:         *req.Bio,
+		InstagramID: *req.InstagramId,
+		TwitterID:   *req.TwitterId,
 	}
 
-	createdProfile, err := c.Interactor.CreateProfile(&profile)
+	createdProfile, err := c.Interactor.CreateProfile(profile)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return ctx.String(http.StatusInternalServerError, "Failed to create profile")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	response := map[string]string{"id": createdProfile.ID}
-	json.NewEncoder(w).Encode(response)
+	return ctx.JSON(http.StatusCreated, map[string]string{"id": createdProfile.ID})
 }
 
-// @Summary Get a profile by ID
-// @Description Get a single profile by its ID
-// @Produce  json
-// @Param   id   path      string  true  "Profile ID"
-// @Success 200  {object}  object
-// @Failure 400  {object}  string
-// @Failure 404  {object}  string
-// @Failure 500  {object}  string
-// @Router /profiles/{id} [get]
-func (c *ProfileController) Show(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, ok := vars["id"]
-	if !ok {
-		http.Error(w, "ID is missing", http.StatusBadRequest)
-		return
-	}
-
-	profile, err := c.Interactor.GetProfile(id)
+func (c *ProfileController) GetProfileById(ctx echo.Context, id openapi_types.UUID) error {
+	profile, err := c.Interactor.GetProfile(id.String())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return ctx.String(http.StatusInternalServerError, "Failed to get profile")
 	}
 	if profile == nil {
-		http.Error(w, "Profile not found", http.StatusNotFound)
-		return
+		return ctx.String(http.StatusNotFound, "Profile not found")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	responseProfile := struct {
-		Name        string `json:"name"`
-		Affiliation string `json:"affiliation"`
-		Bio         string `json:"bio"`
-		InstagramID string `json:"instagram_id"`
-		TwitterID   string `json:"twitter_id"`
-	}{
-		Name:        profile.Name,
-		Affiliation: profile.Affiliation,
-		Bio:         profile.Bio,
-		InstagramID: profile.InstagramID,
-		TwitterID:   profile.TwitterID,
+	res := generated.ProfileInput{
+		Name:        &profile.Name,
+		Affiliation: &profile.Affiliation,
+		Bio:         &profile.Bio,
+		InstagramId: &profile.InstagramID,
+		TwitterId:   &profile.TwitterID,
 	}
-	json.NewEncoder(w).Encode(responseProfile)
+
+	return ctx.JSON(http.StatusOK, res)
 }
 
-// @Summary Get all profiles
-// @Description Get a list of all profiles
-// @Produce  json
-// @Success 200  {array}   object
-// @Failure 500  {object}  string
-// @Router /profiles [get]
-func (c *ProfileController) Index(w http.ResponseWriter, r *http.Request) {
+func (c *ProfileController) GetProfiles(ctx echo.Context) error {
 	profiles, err := c.Interactor.GetAllProfiles()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return ctx.String(http.StatusInternalServerError, "Failed to get all profiles")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	var responseProfiles []struct {
-		Name        string `json:"name"`
-		Affiliation string `json:"affiliation"`
-		Bio         string `json:"bio"`
-		InstagramID string `json:"instagram_id"`
-		TwitterID   string `json:"twitter_id"`
-	}
+	var res []generated.ProfileInput
 	for _, p := range profiles {
-		responseProfiles = append(responseProfiles, struct {
-			Name        string `json:"name"`
-			Affiliation string `json:"affiliation"`
-			Bio         string `json:"bio"`
-			InstagramID string `json:"instagram_id"`
-			TwitterID   string `json:"twitter_id"`
-		}{
-			Name:        p.Name,
-			Affiliation: p.Affiliation,
-			Bio:         p.Bio,
-			InstagramID: p.InstagramID,
-			TwitterID:   p.TwitterID,
+		res = append(res, generated.ProfileInput{
+			Name:        &p.Name,
+			Affiliation: &p.Affiliation,
+			Bio:         &p.Bio,
+			InstagramId: &p.InstagramID,
+			TwitterId:   &p.TwitterID,
 		})
 	}
-	json.NewEncoder(w).Encode(responseProfiles)
+
+	return ctx.JSON(http.StatusOK, res)
 }
