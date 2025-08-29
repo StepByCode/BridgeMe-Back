@@ -65,6 +65,12 @@ MongoDBが起動している状態で、以下のURLにアクセスするとMong
 | `GET`    | `/profiles/{id}` | 特定のプロフィールを取得 |
 | `GET`    | `/profiles`    | 全てのプロフィールを取得 |
 
+### バリデーションルール
+- `POST /profiles`
+  - `name`: 必須項目 (required)
+  - `affiliation`: 必須項目 (required)
+  - `bio`: 必須項目 (required)
+
 ## バックエンド構成
 
 ```mermaid
