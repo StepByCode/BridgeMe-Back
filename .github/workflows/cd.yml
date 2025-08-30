@@ -1,20 +1,35 @@
 name: CD
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Go CI"] # CIワークフローの名前
+    types:
+      - completed
     branches:
-      - main
+      - main # mainブランチでのCI完了時のみ
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }} # CIが成功した場合のみ
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }} # CIが実行されたコミットをチェックアウト
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            cd /home/admin/BridgeMe-Back
             git pull origin main
             if [ $? -ne 0 ]; then
               echo "Error: git pull failed. Aborting deployment."
