@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -18,6 +18,10 @@ jobs:
           script: |
             cd /home/admin/BridgeMe-Back
             git pull origin main
+            if [ $? -ne 0 ]; then
+              echo "Error: git pull failed. Aborting deployment."
+              exit 1
+            fi
             docker compose up -d --build
 
             echo "Waiting 10 seconds for containers to stabilize..."
