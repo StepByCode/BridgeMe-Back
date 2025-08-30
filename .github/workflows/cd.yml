@@ -7,12 +7,14 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production # 環境を指定することで、デプロイメントの可視性が向上します
+    permissions:
+      deployments: write 
+    environment: production
     steps:
     - uses: actions/checkout@v4
     - name: Create Deployment
       uses: actions/github-script@v6
-      id: create_deployment # deployment_id を取得するためにIDを追加
+      id: create_deployment
       with:
         script: |
           const deployment = await github.rest.repos.createDeployment({
@@ -30,8 +32,7 @@ jobs:
     - name: Update Deployment Status (Success)
       if: success()
       uses: actions/github-script@v6
-      with:
-        script: |
+      with:n        script: |
           github.rest.repos.createDeploymentStatus({
             owner: context.repo.owner,
             repo: context.repo.repo,
