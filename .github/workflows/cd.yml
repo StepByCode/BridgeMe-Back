@@ -19,3 +19,27 @@ jobs:
             cd /home/admin/BridgeMe-Back
             git pull origin main
             docker compose up -d --build
+
+            echo "Waiting 10 seconds for containers to stabilize..."
+            sleep 10
+
+            # Check container status
+            CONTAINERS=("mongo" "swagger-ui" "mongo-express" "backend")
+            ALL_RUNNING=true
+
+            for CONTAINER_NAME in "${CONTAINERS[@]}"; do
+              STATUS=$(docker ps -a --filter "name=${CONTAINER_NAME}" --format "{{.Status}}")
+              if [[ "$STATUS" != *"Up"* ]]; then
+                echo "Error: Container ${CONTAINER_NAME} is not running. Status: ${STATUS}"
+                ALL_RUNNING=false
+              else
+                echo "Container ${CONTAINER_NAME} is running."
+              fi
+            done
+
+            if [ "$ALL_RUNNING" = false ]; then
+              echo "One or more containers failed to start. Deployment failed."
+              exit 1 # Fail the GitHub Actions job
+            else
+              echo "All specified containers are running. Deployment successful."
+            fi
