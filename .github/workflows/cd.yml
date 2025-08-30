@@ -8,11 +8,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-<<<<<<< HEAD
       deployments: write # ここを追加するのよ！
-=======
-      deployments: write 
->>>>>>> 9952c78fe06b843d2c46a959e8ade0ec409ffaec
     environment: production
     steps:
     - uses: actions/checkout@v4
@@ -36,12 +32,8 @@ jobs:
     - name: Update Deployment Status (Success)
       if: success()
       uses: actions/github-script@v6
-<<<<<<< HEAD
       with:
         script: |
-=======
-      with:n        script: |
->>>>>>> 9952c78fe06b843d2c46a959e8ade0ec409ffaec
           github.rest.repos.createDeploymentStatus({
             owner: context.repo.owner,
             repo: context.repo.repo,
