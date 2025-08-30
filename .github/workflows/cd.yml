@@ -1,62 +1,55 @@
 name: CD
 
 on:
-  workflow_run:
-    workflows: ["Go CI"] # CIワークフローの名前
-    types:
-      - completed
-    branches:
-      - main # mainブランチでのCI完了時のみ
-
-concurrency:
-  group: deploy-main
-  cancel-in-progress: false
+  push:
+    branches: [ "main" ]
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }} # CIが成功した場合のみ
     runs-on: ubuntu-latest
+    environment: production # 環境を指定することで、デプロイメントの可視性が向上します
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }} # CIが実行されたコミットをチェックアウト
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_PRIVATE_KEY }}
-          script: |
-            cd /home/admin/BridgeMe-Back
-            git pull origin main
-            if [ $? -ne 0 ]; then
-              echo "Error: git pull failed. Aborting deployment."
-              exit 1
-            fi
-            docker compose up -d --build
-
-            echo "Waiting 10 seconds for containers to stabilize..."
-            sleep 10
-
-            # Check container status
-            CONTAINERS=("mongo" "swagger-ui" "mongo-express" "backend")
-            ALL_RUNNING=true
-
-            for CONTAINER_NAME in "${CONTAINERS[@]}"; do
-              STATUS=$(docker ps -a --filter "name=${CONTAINER_NAME}" --format "{{.Status}}")
-              if [[ "$STATUS" != *"Up"* ]]; then
-                echo "Error: Container ${CONTAINER_NAME} is not running. Status: ${STATUS}"
-                ALL_RUNNING=false
-              else
-                echo "Container ${CONTAINER_NAME} is running."
-              fi
-            done
-
-            if [ "$ALL_RUNNING" = false ]; then
-              echo "One or more containers failed to start. Deployment failed."
-              exit 1 # Fail the GitHub Actions job
-            else
-              echo "All specified containers are running. Deployment successful."
-            fi
+    - uses: actions/checkout@v4
+    - name: Create Deployment
+      uses: actions/github-script@v6
+      id: create_deployment # deployment_id を取得するためにIDを追加
+      with:
+        script: |
+          const deployment = await github.rest.repos.createDeployment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.ref,
+            environment: 'production',
+            description: 'Deploying from GitHub Actions',
+            auto_merge: false,
+            required_contexts: [],
+          });
+          core.setOutput('deployment_id', deployment.data.id);
+    - name: Deploy to production
+      run: echo "Deploying..." # Replace with actual deployment steps
+    - name: Update Deployment Status (Success)
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: ${{steps.create_deployment.outputs.deployment_id}},
+            state: 'success',
+            environment: 'production',
+            description: 'Deployment successful',
+          });
+    - name: Update Deployment Status (Failure)
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: ${{steps.create_deployment.outputs.deployment_id}},
+            state: 'failure',
+            environment: 'production',
+            description: 'Deployment failed',
+          });
