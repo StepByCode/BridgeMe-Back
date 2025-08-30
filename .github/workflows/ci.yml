@@ -12,7 +12,6 @@ concurrency:
 
 jobs:
   test:
-    id: ci_test # これを追加
     runs-on: ubuntu-latest
 
     steps:
@@ -29,3 +28,15 @@ jobs:
 
     - name: Run tests
       run: go test -v ./...
+
+    - name: Trigger CD Workflow
+      if: success() # CIが成功した場合のみトリガー
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'cd.yml', // CDワークフローのファイル名
+            ref: context.ref, // 現在のブランチ
+          });

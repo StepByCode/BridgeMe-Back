@@ -1,12 +1,11 @@
 name: CD
 
 on:
-  push:
-    branches: [ "main" ]
+  workflow_dispatch: # これに変更
 
 jobs:
   deploy:
-    needs: ci_test # これを追加
+    # needs: ci_test # これは削除
     runs-on: ubuntu-latest
     permissions:
       deployments: write
