@@ -11,7 +11,12 @@
 
 ### 環境構築手順
 
-1.  **リポジトリのクローン**
+1.  **(初回セットアップまたはクリーンな状態から始める場合)** 以前にコンテナを起動したことがある場合は、既存のデータボリュームを削除してクリーンな状態から始めることを推奨します。
+    ```bash
+    docker compose down -v
+    ```
+
+2.  **リポジトリのクローン**
     ```bash
     git clone https://github.com/StepByCode/BridgeMe.git
     cd BridgeMe-Back
@@ -34,6 +39,35 @@
     docker compose up --build
     ```
     初回起動時やコード変更時には `--build` オプションが必要です。
+
+## トラブルシューティング: `backend` または `mongo-express` がMongoDBに接続できない場合
+
+`backend`サービスや`mongo-express`がMongoDBへの認証エラーで起動しない場合、MongoDBの初期ユーザー情報とアプリケーションが使用する認証情報が一致していない可能性があります。これは、MongoDBのデータボリュームに古いユーザー情報が残っている場合に発生します。
+
+**解決策:**
+
+1.  **MongoDBのデータボリュームを削除し、コンテナを再作成します。**
+    これにより、`.env`ファイルで指定したユーザー名とパスワードでMongoDBが初期化されます。
+
+    ```bash
+    docker compose down -v
+    ```
+
+2.  **`.env`ファイルの内容が、使用したいユーザー名とパスワードで正しく設定されていることを確認してください。**
+    例:
+    ```env
+    MONGO_DB_ROOT_USERNAME=your_desired_username
+    MONGO_DB_ROOT_PASSWORD=your_desired_password
+    ME_CONFIG_BASICAUTH_USERNAME=your_desired_username
+    ME_CONFIG_BASICAUTH_PASSWORD=your_desired_password
+    ```
+    **注意:** `ME_CONFIG_BASICAUTH_USERNAME` と `ME_CONFIG_BASICAUTH_PASSWORD` は、Mongo Expressの管理画面ログイン用です。MongoDBの認証情報とは別に設定することも可能ですが、混乱を避けるため同じ値にすることをお勧めします。
+
+3.  **再度、コンテナを起動します。**
+
+    ```bash
+    docker compose up --build
+    ```
 
 ## アプリケーションの実行
 
