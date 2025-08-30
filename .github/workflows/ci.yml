@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   test:
+    id: ci_test # これを追加
     runs-on: ubuntu-latest
 
     steps:

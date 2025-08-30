@@ -6,9 +6,10 @@ on:
 
 jobs:
   deploy:
+    needs: ci_test # これを追加
     runs-on: ubuntu-latest
     permissions:
-      deployments: write # ここを追加するのよ！
+      deployments: write
     environment: production
     steps:
     - uses: actions/checkout@v4
