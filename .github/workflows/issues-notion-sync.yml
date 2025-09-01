@@ -1,9 +1,9 @@
-name: Notion Sync (custom mapping)
+name: Notion Sync (tasks schema)
 
 on:
   workflow_dispatch:
   issues:
-    types: [opened, edited, labeled, unlabeled, assigned, unassigned, milestoned, demilestoned, reopened, closed]
+    types: [opened, edited, labeled, unlabeled, assigned, unassigned, reopened, closed]
 
 permissions:
   contents: read
@@ -25,10 +25,11 @@ jobs:
       - name: Install deps
         run: npm install @notionhq/client
 
-      - name: Sync GitHub Issues to Notion (custom)
+      - name: Sync GitHub Issues to Notion (tasks schema)
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE: ${{ secrets.NOTION_DATABASE }}
+          NOTION_ASSIGNEE_ID: ${{ secrets.NOTION_ASSIGNEE_ID }} # ← Ryosuke.Kido の NotionユーザーID
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
@@ -40,6 +41,11 @@ jobs:
           const notion = new Client({ auth: process.env.NOTION_TOKEN });
           const DB_ID = process.env.NOTION_DATABASE;
           const [owner, repo] = process.env.REPO.split("/");
+          const ASSIGNEE_ID = process.env.NOTION_ASSIGNEE_ID; // People列に入れる固定ユーザー
+          if (!ASSIGNEE_ID) {
+            console.warn("WARN: NOTION_ASSIGNEE_ID is empty. Assignee will be omitted.");
+          }
+
           const octokitBase = 'https://api.github.com';
           const ghHeaders = {
             'Authorization': `token ${process.env.GITHUB_TOKEN}`,
@@ -48,35 +54,64 @@ jobs:
           };
 
           // ===== Helpers =====
-          const toRich = (s) => [{
-            type: 'text',
-            text: { content: (s ?? '').slice(0, 1900) } // ほどよく制限
-          }];
-
+          const cap = (s,n=1900)=> (s??'').slice(0,n);
+          const rich = (s)=> s ? [{type:'text', text:{content: cap(s)}}] : [];
           const toDate = (iso) => iso ? { start: new Date(iso).toISOString() } : null;
 
+          // ラベル正規化（Notion側ラベルに合わせて大文字/スペースを整える）
+          const LABEL_MAP = new Map([
+            ['bug','Bug'],
+            ['enhancement','Enhancement'],
+            ['documentation','Documentation'],
+            ['feature request','Feature request'],
+            ['help wanted','Help wanted'],
+            ['question','Question'],
+            ['good first issue','Good first issue'],
+            ['high priority','High priority'],
+            ['low priority','Low priority'],
+          ]);
+          const normalizeLabels = (labels=[]) => {
+            const out = [];
+            for (const l of labels) {
+              const key = String(l.name||'').trim().toLowerCase();
+              if (LABEL_MAP.has(key)) out.push({ name: LABEL_MAP.get(key) });
+            }
+            return out;
+          };
+
+          // 進行中判定用キーワード（自由に拡張OK）
+          const INPROG_KEYS = ['in progress','wip','doing','progress','working'];
+          const isInProgressByLabels = (labels=[]) => {
+            const set = new Set(labels.map(l => String(l.name||'').toLowerCase()));
+            return INPROG_KEYS.some(k => set.has(k));
+          };
+
+          // Statusマッピング（Todo / In Progress / Done）
+          const mapStatus = (issue) => {
+            if ((issue.state||'').toLowerCase() === 'closed') return 'Done';
+            if (isInProgressByLabels(issue.labels)) return 'In Progress';
+            return 'Todo';
+          };
+
+          // Notion 保存（Upsert: github id で一意）
           const upsertIssue = async (issue) => {
-            // Notion側プロパティ名（あなたのDBに合わせている）
             const props = {
-              "Title": { title: [{ type:"text", text: { content: issue.title || "" } }] },
-              "author": { rich_text: toRich(issue.user?.login) },
-              "body": { rich_text: toRich(issue.body) },
-              "created": { date: toDate(issue.created_at) },
-              "github id": { number: issue.id },
-              "labels": { multi_select: (issue.labels || []).map(l => ({ name: l.name })) },
-              "milestone": { rich_text: toRich(issue.milestone?.title) },
-              "number": { number: issue.number },
-              "organization": { rich_text: toRich(owner) },
-              "project": { rich_text: toRich("") }, // 必要なら後で詰める
-              "project column": { rich_text: toRich("") },
-              "repository": { rich_text: toRich(repo) },
-              "state": { select: { name: (issue.state === 'open' ? 'Open' : 'Closed') } }, // あなたのSelect値に合わせる
-              "updated": { date: toDate(issue.updated_at) },
-              "assignees": { multi_select: (issue.assignees || []).map(a => ({ name: a.login })) },
-              "url": { url: issue.html_url }
+              "Task":       { title: [{ type:"text", text: { content: cap(issue.title||'') } }] },
+              "Status":     { select: { name: mapStatus(issue) } },
+              "Assignee":   ASSIGNEE_ID ? { people: [{ id: ASSIGNEE_ID }] } : undefined,
+              "Due":        { date: null }, // ここは外部から与えないので空のまま
+              "Labels":     { multi_select: normalizeLabels(issue.labels) },
+              "URL":        { url: issue.html_url },
+              "Created":    { date: toDate(issue.created_at) },
+              "Updated":    { date: toDate(issue.updated_at) },
+              "Author":     { rich_text: rich(issue.user?.login) },
+              "Repository": { rich_text: rich(repo) },
+              "Issue Number": { number: issue.number },
+              // 内部キー（ビューに出さなくてOK）
+              "github id":  { number: issue.id },
             };
 
-            // 既存ページ検索（github id で一意）
+            // 既存ページ検索
             const existing = await notion.databases.query({
               database_id: DB_ID,
               filter: { property: "github id", number: { equals: issue.id } },
@@ -93,35 +128,26 @@ jobs:
             }
           };
 
-          const getIssue = async (number) => {
-            const res = await fetch(`${octokitBase}/repos/${owner}/${repo}/issues/${number}`, { headers: ghHeaders });
-            if (!res.ok) throw new Error(`Get issue ${number} failed: ${res.status}`);
-            return await res.json();
-          };
-
+          // API
           const getAllIssues = async () => {
-            // 直近 100件（必要なら増やせる）
             const res = await fetch(`${octokitBase}/repos/${owner}/${repo}/issues?state=all&per_page=100`, { headers: ghHeaders });
             if (!res.ok) throw new Error(`List issues failed: ${res.status}`);
-            // PRも含むので、純Issueに限定したければ pull_request フィールド無いものに絞る
-            const arr = await res.json();
-            return arr;
+            return await res.json();
           };
 
           (async () => {
             try {
               if (process.env.EVENT_NAME === 'issues') {
-                const payloadPath = process.env.GITHUB_EVENT_PATH;
-                const payload = require(payloadPath);
-                const issue = payload.issue;
-                if (!issue) throw new Error("No issue payload");
-                await upsertIssue(issue);
+                const payload = require(process.env.GITHUB_EVENT_PATH);
+                if (!payload.issue) throw new Error("No issue payload");
+                // PRは除外
+                if (payload.issue.pull_request) { console.log("Skip PR as issue"); process.exit(0); }
+                await upsertIssue(payload.issue);
               } else {
-                // 手動実行は一括同期
+                // 手動実行：一括同期
                 const issues = await getAllIssues();
                 for (const issue of issues) {
-                  // PRを除外したい場合は次のifを有効化
-                  // if (issue.pull_request) continue;
+                  if (issue.pull_request) continue; // PR除外
                   await upsertIssue(issue);
                 }
               }
