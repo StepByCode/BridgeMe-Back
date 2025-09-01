@@ -1,9 +1,9 @@
-name: Notion Sync (tasks schema)
+name: Notion Sync (tasks schema, status-aware)
 
 on:
   workflow_dispatch:
   issues:
-    types: [opened, edited, labeled, unlabeled, assigned, unassigned, reopened, closed, closed]
+    types: [opened, edited, labeled, unlabeled, assigned, unassigned, reopened, closed]
 
 permissions:
   contents: read
@@ -25,21 +25,15 @@ jobs:
       - name: Install deps
         run: npm install @notionhq/client
 
-      - name: Sync GitHub Issues to Notion (tasks schema)
+      - name: Sync GitHub Issues to Notion (status-aware)
         env:
-          # --- 必須シークレット ---
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}           # Notion Internal Integration (secret_...)
-          NOTION_DATABASE: ${{ secrets.NOTION_DATABASE }}     # 32桁DB ID
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}           # 既定で入ってるやつ
-
-          # --- 任意：固定アサイン（People列）---
-          # 例: Ryosuke.Kido -> 190d872b-594c-812a-a3c6-000295d6d2a7
-          NOTION_ASSIGNEE_ID: ${{ secrets.NOTION_ASSIGNEE_ID }}
-
-          # ラベル→In Progress 判定のキーワード（カンマ区切りで拡張可）
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE: ${{ secrets.NOTION_DATABASE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NOTION_ASSIGNEE_ID: ${{ secrets.NOTION_ASSIGNEE_ID }} # 例: 190d872b-594c-812a-a3c6-000295d6d2a7
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
           INPROGRESS_KEYS: in progress,wip,doing,progress,working
-
-          # ラベル名の正規化用（GitHub側の小文字名=Notion側の表示名）
           LABEL_MAP_JSON: >
             {
               "bug":"Bug",
@@ -52,10 +46,6 @@ jobs:
               "high priority":"High priority",
               "low priority":"Low priority"
             }
-
-          # コンテキスト
-          REPO: ${{ github.repository }}
-          EVENT_NAME: ${{ github.event_name }}
         run: |
           node - <<'NODE'
           const { Client } = require("@notionhq/client");
@@ -73,12 +63,10 @@ jobs:
             'X-GitHub-Api-Version': '2022-11-28'
           };
 
-          // ---- utils
           const cap = (s,n=1900)=> (s??'').slice(0,n);
           const rich = (s)=> s ? [{type:'text', text:{content: cap(s)}}] : [];
           const toDate = (iso) => iso ? { start: new Date(iso).toISOString() } : null;
 
-          // ラベル正規化
           const LABEL_MAP = new Map(Object.entries(JSON.parse(process.env.LABEL_MAP_JSON || "{}")));
           const normalizeLabels = (labels=[]) => {
             const out = [];
@@ -89,58 +77,65 @@ jobs:
             return out;
           };
 
-          // 進行中判定キーワード
           const INPROG_KEYS = String(process.env.INPROGRESS_KEYS || "in progress,wip,doing,progress,working")
             .split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
           const isInProgressByLabels = (labels=[]) => {
             const set = new Set(labels.map(l => String(l.name||'').toLowerCase()));
             return INPROG_KEYS.some(k => set.has(k));
           };
-
-          // Status（Todo / In Progress / Done）
-          const mapStatus = (issue) => {
+          const mapStatusName = (issue) => {
             if ((issue.state||'').toLowerCase() === 'closed') return 'Done';
             if (isInProgressByLabels(issue.labels)) return 'In Progress';
             return 'Todo';
           };
 
-          // ---- DBメタ取得
-          let DB_PROPS = null;
-          async function ensureDbProps() {
-            if (DB_PROPS) return DB_PROPS;
+          // ---- DBメタ：各プロパティの type を取得（status/select を識別）
+          let DB_PROP_TYPES = null;
+          async function loadDbPropTypes() {
+            if (DB_PROP_TYPES) return DB_PROP_TYPES;
             const db = await notion.databases.retrieve({ database_id: DB_ID });
-            DB_PROPS = new Set(Object.keys(db.properties || {}));
-            return DB_PROPS;
+            DB_PROP_TYPES = {};
+            for (const [name, def] of Object.entries(db.properties || {})) {
+              DB_PROP_TYPES[name] = def.type; // e.g. 'title' | 'rich_text' | 'status' | 'select' | ...
+            }
+            return DB_PROP_TYPES;
           }
-          const hasProp = (name)=> DB_PROPS && DB_PROPS.has(name);
+          const hasProp = (name)=> DB_PROP_TYPES && (name in DB_PROP_TYPES);
+          const typeOf = (name)=> DB_PROP_TYPES ? DB_PROP_TYPES[name] : undefined;
 
-          // ---- Upsert
+          // Statusプロパティを型に合わせて組み立て
+          function buildStatusProp(statusName) {
+            const t = typeOf("Status");
+            if (t === "status") return { status: { name: statusName } };
+            if (t === "select") return { select: { name: statusName } };
+            // どちらでもない場合は未設定で返す（存在しない列）
+            return undefined;
+          }
+
           async function upsertIssue(issue) {
-            await ensureDbProps();
+            await loadDbPropTypes();
 
-            // 書き込み候補（存在する列だけ投げる）
             const candidate = {
-              "Task":         { title: [{ type:"text", text: { content: cap(issue.title||'') } }] },
-              "Status":       { select: { name: mapStatus(issue) } },
-              "Assignee":     ASSIGNEE_ID ? { people: [{ id: ASSIGNEE_ID }] } : undefined,
-              "Due":          { date: null },
-              "Labels":       { multi_select: normalizeLabels(issue.labels) },
-              "URL":          { url: issue.html_url },
-              "Created":      { date: toDate(issue.created_at) },
-              "Updated":      { date: toDate(issue.updated_at) },
-              "Author":       { rich_text: rich(issue.user?.login) },
-              "Repository":   { rich_text: rich(repo) },
-              "Issue Number": { number: issue.number },
-              "github id":    { number: issue.id }, // 無ければ後で諦める
+              "Task":         hasProp("Task")         ? { title: [{ type:"text", text: { content: cap(issue.title||'') } }] } : undefined,
+              "Status":       hasProp("Status")       ? buildStatusProp(mapStatusName(issue)) : undefined,
+              "Assignee":     (hasProp("Assignee") && ASSIGNEE_ID) ? { people: [{ id: ASSIGNEE_ID }] } : undefined,
+              "Due":          hasProp("Due")          ? { date: null } : undefined,
+              "Labels":       hasProp("Labels")       ? { multi_select: normalizeLabels(issue.labels) } : undefined,
+              "URL":          hasProp("URL")          ? { url: issue.html_url } : undefined,
+              "Created":      hasProp("Created")      ? { date: toDate(issue.created_at) } : undefined,
+              "Updated":      hasProp("Updated")      ? { date: toDate(issue.updated_at) } : undefined,
+              "Author":       hasProp("Author")       ? { rich_text: rich(issue.user?.login) } : undefined,
+              "Repository":   hasProp("Repository")   ? { rich_text: rich(repo) } : undefined,
+              "Issue Number": hasProp("Issue Number") ? { number: issue.number } : undefined,
+              "github id":    hasProp("github id")    ? { number: issue.id } : undefined,
             };
 
             const props = {};
             for (const [k,v] of Object.entries(candidate)) {
-              if (v === undefined) continue;
-              if (hasProp(k)) props[k] = v;
+              if (v !== undefined) props[k] = v;
             }
 
-            // 検索キー：① github id、② Issue Number + Repository、③作成一択
+            // 検索キー：① github id、② Issue Number + Repository、③新規作成
             let existing = null;
             if (hasProp("github id")) {
               existing = await notion.databases.query({
@@ -149,6 +144,7 @@ jobs:
                 page_size: 1
               });
             } else if (hasProp("Issue Number") && hasProp("Repository")) {
+              // Repository が rich_text で equals 比較できる前提
               existing = await notion.databases.query({
                 database_id: DB_ID,
                 filter: {
@@ -173,14 +169,12 @@ jobs:
             }
           }
 
-          // ---- GitHub API（手動同期）
           async function getAllIssues() {
             const res = await fetch(`${ghBase}/repos/${owner}/${repo}/issues?state=all&per_page=100`, { headers: ghHeaders });
             if (!res.ok) throw new Error(`List issues failed: ${res.status}`);
             return await res.json();
           }
 
-          // ---- main
           (async () => {
             try {
               if (process.env.EVENT_NAME === 'issues') {
