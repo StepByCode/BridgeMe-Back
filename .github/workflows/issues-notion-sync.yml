@@ -1,43 +1,134 @@
-name: Notion Sync
+name: Notion Sync (custom mapping)
 
 on:
   workflow_dispatch:
   issues:
-    types:
-      - opened
-      - edited
-      - labeled
-      - unlabeled
-      - assigned
-      - unassigned
-      - milestoned
-      - demilestoned
-      - reopened
-      - closed
+    types: [opened, edited, labeled, unlabeled, assigned, unassigned, milestoned, demilestoned, reopened, closed]
 
 permissions:
   contents: read
   issues: read
 
 jobs:
-  notion_job:
-    name: Add GitHub Issues to Notion
+  sync_to_notion:
     runs-on: ubuntu-latest
-
     concurrency:
       group: notion-sync-${{ github.event.issue.number || 'manual' }}
       cancel-in-progress: false
 
     steps:
-      - name: (optional) Print event payload (debug)
-        if: ${{ runner.debug == '1' }}
-        run: |
-          echo "event_name=$GITHUB_EVENT_NAME"
-          jq . "$GITHUB_EVENT_PATH" || true
-
-      - name: Add GitHub Issues to Notion
-        uses: tryfabric/notion-github-action@v1
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          notion-token: ${{ secrets.NOTION_TOKEN }}
-          notion-db: ${{ secrets.NOTION_DATABASE }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          node-version: 20
+
+      - name: Install deps
+        run: npm install @notionhq/client
+
+      - name: Sync GitHub Issues to Notion (custom)
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE: ${{ secrets.NOTION_DATABASE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          node - <<'NODE'
+          const { Client } = require("@notionhq/client");
+          const fetch = global.fetch;
+
+          const notion = new Client({ auth: process.env.NOTION_TOKEN });
+          const DB_ID = process.env.NOTION_DATABASE;
+          const [owner, repo] = process.env.REPO.split("/");
+          const octokitBase = 'https://api.github.com';
+          const ghHeaders = {
+            'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+          };
+
+          // ===== Helpers =====
+          const toRich = (s) => [{
+            type: 'text',
+            text: { content: (s ?? '').slice(0, 1900) } // ほどよく制限
+          }];
+
+          const toDate = (iso) => iso ? { start: new Date(iso).toISOString() } : null;
+
+          const upsertIssue = async (issue) => {
+            // Notion側プロパティ名（あなたのDBに合わせている）
+            const props = {
+              "Title": { title: [{ type:"text", text: { content: issue.title || "" } }] },
+              "author": { rich_text: toRich(issue.user?.login) },
+              "body": { rich_text: toRich(issue.body) },
+              "created": { date: toDate(issue.created_at) },
+              "github id": { number: issue.id },
+              "labels": { multi_select: (issue.labels || []).map(l => ({ name: l.name })) },
+              "milestone": { rich_text: toRich(issue.milestone?.title) },
+              "number": { number: issue.number },
+              "organization": { rich_text: toRich(owner) },
+              "project": { rich_text: toRich("") }, // 必要なら後で詰める
+              "project column": { rich_text: toRich("") },
+              "repository": { rich_text: toRich(repo) },
+              "state": { select: { name: (issue.state === 'open' ? 'Open' : 'Closed') } }, // あなたのSelect値に合わせる
+              "updated": { date: toDate(issue.updated_at) },
+              "assignees": { multi_select: (issue.assignees || []).map(a => ({ name: a.login })) },
+              "url": { url: issue.html_url }
+            };
+
+            // 既存ページ検索（github id で一意）
+            const existing = await notion.databases.query({
+              database_id: DB_ID,
+              filter: { property: "github id", number: { equals: issue.id } },
+              page_size: 1
+            });
+
+            if (existing.results.length) {
+              const pageId = existing.results[0].id;
+              await notion.pages.update({ page_id: pageId, properties: props });
+              console.log(`Updated #${issue.number} -> ${pageId}`);
+            } else {
+              await notion.pages.create({ parent: { database_id: DB_ID }, properties: props });
+              console.log(`Created #${issue.number}`);
+            }
+          };
+
+          const getIssue = async (number) => {
+            const res = await fetch(`${octokitBase}/repos/${owner}/${repo}/issues/${number}`, { headers: ghHeaders });
+            if (!res.ok) throw new Error(`Get issue ${number} failed: ${res.status}`);
+            return await res.json();
+          };
+
+          const getAllIssues = async () => {
+            // 直近 100件（必要なら増やせる）
+            const res = await fetch(`${octokitBase}/repos/${owner}/${repo}/issues?state=all&per_page=100`, { headers: ghHeaders });
+            if (!res.ok) throw new Error(`List issues failed: ${res.status}`);
+            // PRも含むので、純Issueに限定したければ pull_request フィールド無いものに絞る
+            const arr = await res.json();
+            return arr;
+          };
+
+          (async () => {
+            try {
+              if (process.env.EVENT_NAME === 'issues') {
+                const payloadPath = process.env.GITHUB_EVENT_PATH;
+                const payload = require(payloadPath);
+                const issue = payload.issue;
+                if (!issue) throw new Error("No issue payload");
+                await upsertIssue(issue);
+              } else {
+                // 手動実行は一括同期
+                const issues = await getAllIssues();
+                for (const issue of issues) {
+                  // PRを除外したい場合は次のifを有効化
+                  // if (issue.pull_request) continue;
+                  await upsertIssue(issue);
+                }
+              }
+              console.log("Done.");
+            } catch (e) {
+              console.error(e);
+              process.exit(1);
+            }
+          })();
+          NODE
