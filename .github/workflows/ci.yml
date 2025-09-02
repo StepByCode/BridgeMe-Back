@@ -29,9 +29,9 @@ jobs:
 
     - name: Run tests
       run: go test -v ./...
-
     - name: Trigger CD Workflow
-      if: success() # CIが成功した場合のみトリガー
+      if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
       uses: actions/github-script@v6
       with:
         script: |
