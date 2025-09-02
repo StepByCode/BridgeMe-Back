@@ -1,11 +1,7 @@
 name: CD
 
 on:
-<<<<<<< HEAD
-  workflow_dispatch:
-=======
   workflow_dispatch: # これに変更
->>>>>>> f7e114e64c9f0d0ad6c16decacf996566f9aca8d
 
 jobs:
   deploy:
