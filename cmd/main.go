@@ -8,6 +8,7 @@ import (
 	"github.com/dokkiichan/BridgeMe-Back/internal/interfaces/controllers"
 	"github.com/dokkiichan/BridgeMe-Back/internal/interfaces/generated"
 	"github.com/dokkiichan/BridgeMe-Back/internal/interfaces/repository"
+	"github.com/dokkiichan/BridgeMe-Back/internal/interfaces/middleware"
 	"github.com/dokkiichan/BridgeMe-Back/internal/usecase"
 	"github.com/labstack/echo/v4"
 )
@@ -30,7 +31,16 @@ func main() {
 
 	e := echo.New()
 
-	generated.RegisterHandlers(e, profileController)
+	authMiddleware, err := middleware.NewAuthMiddleware()
+	if err != nil {
+		log.Fatal("Auth0ミドルウェアの初期化に失敗しました:", err)
+	}
+
+	// プロファイル関連のルートにミドルウェアを適用
+	profileGroup := e.Group("/profiles")
+	profileGroup.Use(middleware.Auth0EchoMiddleware(authMiddleware))
+
+	generated.RegisterHandlers(profileGroup, profileController)
 
 	port := os.Getenv("PORT")
 	if port == "" {
