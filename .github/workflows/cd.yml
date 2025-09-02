@@ -20,7 +20,7 @@ jobs:
           const deployment = await github.rest.repos.createDeployment({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            ref: context.ref,
+            ref: 'refs/heads/main',
             environment: 'production',
             description: 'Deploying from GitHub Actions',
             auto_merge: false,
