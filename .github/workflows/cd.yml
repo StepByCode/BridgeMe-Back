@@ -1,15 +1,37 @@
 name: CD
 
 on:
+<<<<<<< HEAD
+  workflow_dispatch:
+=======
   workflow_dispatch: # これに変更
+>>>>>>> f7e114e64c9f0d0ad6c16decacf996566f9aca8d
 
 jobs:
   deploy:
     # needs: ci_test # これは削除
     runs-on: ubuntu-latest
+    permissions:
+      deployments: write # デプロイメントAPIに書き込む権限
     environment: production
     steps:
     - uses: actions/checkout@v4
+
+    - name: Create Deployment
+      uses: actions/github-script@v6
+      id: create_deployment
+      with:
+        script: |
+          const deployment = await github.rest.repos.createDeployment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.ref,
+            environment: 'production',
+            description: 'Deploying from GitHub Actions',
+            auto_merge: false,
+            required_contexts: [],
+          });
+          core.setOutput('deployment_id', deployment.data.id);
 
     - name: Set up SSH
       uses: webfactory/ssh-agent@v0.7.0
@@ -24,7 +46,7 @@ jobs:
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         source: "."
         target: "/home/admin/BridgeMe-Back"
-        strip_components: 1 # リポジトリのルートディレクトリをターゲットディレクトリにコピー
+        strip_components: 1
 
     - name: Build and Run Docker Compose on EC2
       uses: appleboy/ssh-action@master
@@ -36,3 +58,31 @@ jobs:
           - cd /home/admin/BridgeMe-Back
           - docker compose build
           - docker compose up -d
+
+    - name: Update Deployment Status (Success)
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: ${{steps.create_deployment.outputs.deployment_id}},
+            state: 'success',
+            environment: 'production',
+            description: 'Deployment successful',
+          });
+
+    - name: Update Deployment Status (Failure)
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: ${{steps.create_deployment.outputs.deployment_id}},
+            state: 'failure',
+            environment: 'production',
+            description: 'Deployment failed',
+          });
