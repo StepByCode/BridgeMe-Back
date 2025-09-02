@@ -50,10 +50,10 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
-        script:
-          - cd /home/admin/BridgeMe-Back
-          - docker compose build
-          - docker compose up -d
+        script: |
+          cd /home/admin/BridgeMe-Back
+          docker compose build
+          docker compose up -d
 
     - name: Update Deployment Status (Success)
       if: success()
