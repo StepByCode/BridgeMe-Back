@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    permissions:
+      actions: write # ここを追加
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -24,11 +29,9 @@ jobs:
 
     - name: Run tests
       run: go test -v ./...
-<<<<<<< Updated upstream
-=======
-
     - name: Trigger CD Workflow
       if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
       uses: actions/github-script@v6
       with:
         script: |
@@ -38,4 +41,3 @@ jobs:
             workflow_id: 'cd.yml', // CDワークフローのファイル名
             ref: context.ref, // 現在のブランチ
           });
->>>>>>> Stashed changes
