@@ -24,3 +24,18 @@ jobs:
 
     - name: Run tests
       run: go test -v ./...
+<<<<<<< Updated upstream
+=======
+
+    - name: Trigger CD Workflow
+      if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'cd.yml', // CDワークフローのファイル名
+            ref: context.ref, // 現在のブランチ
+          });
+>>>>>>> Stashed changes
