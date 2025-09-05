@@ -11,6 +11,13 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_DB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_DB_ROOT_PASSWORD}
     command: mongod --port 27018
+    healthcheck:
+      test: |
+        mongosh --port 27018 -u ${MONGO_DB_ROOT_USERNAME} -p ${MONGO_DB_ROOT_PASSWORD} --authenticationDatabase admin --eval 'db.getSiblingDB("admin").runCommand({ping: 1})'
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   backend:
     build:
@@ -20,7 +27,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     environment:
       - MONGODB_URI=mongodb://${MONGO_DB_ROOT_USERNAME}:${MONGO_DB_ROOT_PASSWORD}@mongo:27018/
       - PORT=8080
