@@ -50,6 +50,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
+        port: ${{ secrets.EC2_PORT }}
         script: |
           cd /home/dokkiitech/BridgeMe-Back
           git pull origin main
