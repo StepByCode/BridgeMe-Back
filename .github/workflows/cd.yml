@@ -41,7 +41,7 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         source: "."
-        target: "/home/admin/BridgeMe-Back"
+        target: "/home/dokkiitech/BridgeMe-Back"
         strip_components: 1
 
     - name: Build and Run Docker Compose on EC2
