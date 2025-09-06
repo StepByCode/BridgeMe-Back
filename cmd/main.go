@@ -10,6 +10,7 @@ import (
 	"github.com/dokkiichan/BridgeMe-Back/internal/interfaces/repository"
 	"github.com/dokkiichan/BridgeMe-Back/internal/usecase"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -29,6 +30,12 @@ func main() {
 	profileController := controllers.NewProfileController(profileUseCase)
 
 	e := echo.New()
+
+	// CORSミドルウェアの設定
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"http://localhost:3003", "https://bridgeme.dokkiitech.dev"}, // 許可するオリジン
+		AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
+	}))
 
 	generated.RegisterHandlers(e, profileController)
 

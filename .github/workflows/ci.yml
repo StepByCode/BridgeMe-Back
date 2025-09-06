@@ -29,6 +29,12 @@ jobs:
         go mod tidy
         go mod vendor
 
+    - name: Auto-commit changes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "ci: Automate go mod tidy and vendor"
+        file_pattern: go.mod go.sum vendor/
+
     - name: Run tests
       run: go test -v ./...
     - name: Trigger CD Workflow

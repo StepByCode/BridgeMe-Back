@@ -54,6 +54,7 @@ jobs:
         script: |
           cd /home/dokkiitech/BridgeMe-Back
           git pull origin main
+          go mod vendor
           docker compose build
           docker compose up -d
 
