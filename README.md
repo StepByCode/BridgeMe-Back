@@ -1,5 +1,7 @@
 # BridgeMe - Backend
 
+![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white) ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white) ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white) ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/dokkiichan/BridgeMe-Back?style=for-the-badge)
+
 ## プロジェクト概要
 このプロジェクトは、NFCキーホルダーをスマートフォンにかざすだけで、プロフィールをウェブブラウザに表示するシンプルなサービスです。バックエンドはGo言語で実装されており、クリーンアーキテクチャの原則に従っています。
 
@@ -76,6 +78,17 @@
 -   **Goバックエンド:** `http://localhost:8080`
 -   **MongoDB:** `localhost:2701` (Dockerコンテナ内部からアクセス)
 -   **Mongo Express:** `http://localhost:8081`
+
+## デプロイ (Deployment)
+
+本番環境へのデプロイは、GitHub Actionsを利用して自動化されています。デプロイフローは以下の通りです。
+
+1.  **プルリクエストの作成**: 変更を`main`ブランチに対するプルリクエストとして作成します。
+2.  **CIの実行**: プルリクエストが作成されると、自動的にCI（テスト）が実行されます。
+3.  **マージ**: CIが成功し、レビューで承認されると、プルリクエストを`main`ブランチにマージできます。（ブランチ保護ルールにより、CIの失敗したコードはマージできません。）
+4.  **デプロイの開始**: `main`ブランチへのマージをトリガーに、デプロイワークフローが自動的に開始されます。
+5.  **手動承認**: `Terraform Apply`のステップで、GitHub ActionsのUI上で**手動承認**が求められます。
+6.  **デプロイ実行**: 承認されると、Terraformが本番サーバーに変更を適用します。
 
 ## APIドキュメント (OpenAPI / Swagger UI)
 
