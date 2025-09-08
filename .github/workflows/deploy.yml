@@ -41,11 +41,10 @@ jobs:
   terraform_apply:
     name: 'Terraform Apply'
     needs: terraform_plan
-    if: needs.terraform_plan.outputs.plan_exit_code != 1 # 1はplanに差分がない場合
+    if: success()
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: http://${{ secrets.SERVER_IP }}
 
     steps:
       - name: Checkout code
