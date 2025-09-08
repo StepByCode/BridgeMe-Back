@@ -36,3 +36,8 @@ go run main.go
 
 MongoDBを使用しています。
 接続情報は環境変数 `MONGODB_URI` で設定します。
+
+## デプロイ (Deployment)
+
+本番環境へのデプロイはGitHub Actionsを通じて行われます。
+詳細なデプロイフローについては、プロジェクトルートの `README.md` を参照してください。
