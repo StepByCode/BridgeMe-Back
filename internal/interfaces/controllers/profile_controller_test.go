@@ -46,6 +46,19 @@ func (m *MockProfileInteractor) GetAllProfiles() ([]*domain.Profile, error) {
 	return args.Get(0).([]*domain.Profile), args.Error(1)
 }
 
+func (m *MockProfileInteractor) UpdateProfile(id string, profile *domain.Profile) (*domain.Profile, error) {
+	args := m.Called(id, profile)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Profile), args.Error(1)
+}
+
+func (m *MockProfileInteractor) DeleteProfile(id string) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+
 func TestCreateProfile(t *testing.T) {
 	e := echo.New()
 	mockInteractor := new(MockProfileInteractor)
@@ -127,5 +140,62 @@ func TestGetProfiles(t *testing.T) {
 	json.Unmarshal(rec.Body.Bytes(), &responseProfiles)
 	assert.Len(t, responseProfiles, 2)
 	assert.Equal(t, profiles[0].Name, *responseProfiles[0].Name)
+	mockInteractor.AssertExpectations(t)
+}
+
+func TestUpdateProfile(t *testing.T) {
+	e := echo.New()
+	mockInteractor := new(MockProfileInteractor)
+	controller := NewProfileController(mockInteractor)
+
+	testUUID := uuid.New()
+	profileJSON := `{"name":"Updated User","affiliation":"Updated Inc.","bio":"An updated bio","instagram_id":"updated_insta","twitter_id":"updated_x"}`
+	req := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(profileJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetParamNames("id")
+	ctx.SetParamValues(testUUID.String())
+
+	updatedProfile := &domain.Profile{ID: testUUID.String(), Name: "Updated User"}
+	mockInteractor.On("UpdateProfile", testUUID.String(), mock.AnythingOfType("*domain.Profile")).Return(updatedProfile, nil)
+
+	var idParam openapi_types.UUID
+	idParam, err := uuid.Parse(testUUID.String())
+	assert.NoError(t, err)
+
+	err = controller.UpdateProfile(ctx, idParam)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var response map[string]string
+	json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.Equal(t, updatedProfile.ID, response["id"])
+	mockInteractor.AssertExpectations(t)
+}
+
+func TestDeleteProfile(t *testing.T) {
+	e := echo.New()
+	mockInteractor := new(MockProfileInteractor)
+	controller := NewProfileController(mockInteractor)
+
+	testUUID := uuid.New()
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetParamNames("id")
+	ctx.SetParamValues(testUUID.String())
+
+	mockInteractor.On("DeleteProfile", testUUID.String()).Return(nil)
+
+	var idParam openapi_types.UUID
+	idParam, err := uuid.Parse(testUUID.String())
+	assert.NoError(t, err)
+
+	err = controller.DeleteProfile(ctx, idParam)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
 	mockInteractor.AssertExpectations(t)
 }

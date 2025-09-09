@@ -3,4 +3,4 @@ package: generated
 generate:
   - types
   - server
-output: interfaces/generated/types.go
+output: internal/interfaces/generated/types.go

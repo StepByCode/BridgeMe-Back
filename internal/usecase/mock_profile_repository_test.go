@@ -31,3 +31,13 @@ func (m *MockProfileRepository) FindAll() ([]*domain.Profile, error) {
 	}
 	return args.Get(0).([]*domain.Profile), args.Error(1)
 }
+
+func (m *MockProfileRepository) Update(profile *domain.Profile) error {
+	args := m.Called(profile)
+	return args.Error(0)
+}
+
+func (m *MockProfileRepository) Delete(id string) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
