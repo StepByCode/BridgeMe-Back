@@ -13,9 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: write # ここを追加
+    services:
+      mongo:
+        image: mongo:latest
+        ports:
+          - "27018:27018"
+        env:
+          MONGO_INITDB_ROOT_USERNAME: ${{ secrets.MONGO_DB_ROOT_USERNAME }}
+          MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.MONGO_DB_ROOT_PASSWORD }}
+        options: >- # Healthcheck options
+          --health-cmd "mongosh --port 27018 -u ${{ secrets.MONGO_DB_ROOT_USERNAME }} -p ${{ secrets.MONGO_DB_ROOT_PASSWORD }} --authenticationDatabase admin --eval 'db.getSiblingDB(\"admin\").runCommand({ping: 1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
 
     - name: Set up Go
       uses: actions/setup-go@v4
