@@ -19,6 +19,7 @@ resource "null_resource" "deploy" {
       "git pull",
       "docker compose build",
       "docker compose up -d",
+      "docker exec -it swagger-ui nginx -s reload",
       "echo 'Deployment completed successfully!'"
     ]
   }
