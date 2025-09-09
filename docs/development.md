@@ -3,7 +3,7 @@
 ## API Spec-First開発
 
 本プロジェクトは、APIの仕様を最初に定義する **Spec-First** の開発アプローチを採用しています。
-API仕様は、プロジェクトルートの `docs/openapi.yaml` にOpenAPI 3.0形式で記述されています。このファイルが、APIに関する唯一の信頼できる情報源（Single Source of Truth）です。
+API仕様は、プロジェクトルートの `api/openapi.yaml` にOpenAPI 3.0形式で記述されています。このファイルが、APIに関する唯一の信頼できる情報源（Single Source of Truth）です。
 
 ### API仕様の変更フロー
 

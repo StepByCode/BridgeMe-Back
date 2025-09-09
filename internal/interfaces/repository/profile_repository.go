@@ -58,3 +58,30 @@ func (r *ProfileRepositoryImpl) FindAll() ([]*domain.Profile, error) {
 
 	return profiles, nil
 }
+
+func (r *ProfileRepositoryImpl) Update(profile *domain.Profile) error {
+	update := bson.D{
+		bson.E{Key: "$set", Value: bson.D{
+			bson.E{Key: "name", Value: profile.Name},
+			bson.E{Key: "affiliation", Value: profile.Affiliation},
+			bson.E{Key: "bio", Value: profile.Bio},
+			bson.E{Key: "instagramId", Value: profile.InstagramID},
+			bson.E{Key: "twitterId", Value: profile.TwitterID},
+		}},
+	}
+	_, err := r.Collection.UpdateOne(context.Background(), bson.M{"id": profile.ID}, update)
+	if err != nil {
+		log.Printf("Error updating profile: %v", err)
+		return err
+	}
+	return nil
+}
+
+func (r *ProfileRepositoryImpl) Delete(id string) error {
+	_, err := r.Collection.DeleteOne(context.Background(), bson.M{"id": id})
+	if err != nil {
+		log.Printf("Error deleting profile: %v", err)
+		return err
+	}
+	return nil
+}

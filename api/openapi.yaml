@@ -57,7 +57,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ProfileInput'
+                  $ref: '#/components/schemas/Profile'
         '400':
           description: 不正なリクエスト
           content:
@@ -89,7 +89,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProfileInput'
+                $ref: '#/components/schemas/Profile'
         '400':
           description: 不正なリクエスト
           content:
@@ -108,4 +108,101 @@ paths:
             application/json:
               schema:
                 type: string
+    put:
+      summary: 指定したIDのプロフィール情報を更新する
+      description: 指定したIDのプロフィール情報を更新します
+      operationId: updateProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: プロフィールのUUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '200':
+          description: 更新されたプロフィール情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          description: 不正なリクエスト
+        '404':
+          description: 見つかりません
+        '500':
+          description: サーバーエラー
+    delete:
+      summary: 指定したIDのプロフィール情報を削除する
+      description: 指定したIDのプロフィール情報を削除します
+      operationId: deleteProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: プロフィールのUUID
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 見つかりません
+        '500':
+          description: サーバーエラー
 components:
+  schemas:
+    ProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 名前
+        affiliation:
+          type: string
+          description: 所属
+        bio:
+          type: string
+          description: 自己紹介
+        instagramId:
+          type: string
+          description: InstagramのID
+        twitterId:
+          type: string
+          description: TwitterのID
+      required:
+        - name
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: プロフィールのUUID
+        name:
+          type: string
+          description: 名前
+        affiliation:
+          type: string
+          description: 所属
+        bio:
+          type: string
+          description: 自己紹介
+        instagramId:
+          type: string
+          description: InstagramのID
+        twitterId:
+          type: string
+          description: TwitterのID
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時

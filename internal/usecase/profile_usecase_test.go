@@ -60,3 +60,34 @@ func TestGetAllProfiles(t *testing.T) {
 	assert.Len(t, foundProfiles, 2)
 	mockRepo.AssertExpectations(t)
 }
+
+func TestUpdateProfile(t *testing.T) {
+	mockRepo := new(MockProfileRepository)
+	interactor := NewProfileUseCase(mockRepo)
+
+	profile := &domain.Profile{ID: "test-id", Name: "Updated User"}
+
+	mockRepo.On("Update", profile).Return(nil)
+	mockRepo.On("FindByID", "test-id").Return(profile, nil)
+
+	updatedProfile, err := interactor.UpdateProfile(profile)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, updatedProfile)
+	assert.Equal(t, "test-id", updatedProfile.ID)
+	assert.Equal(t, "Updated User", updatedProfile.Name)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestDeleteProfile(t *testing.T) {
+	mockRepo := new(MockProfileRepository)
+	interactor := NewProfileUseCase(mockRepo)
+
+	testID := "test-id"
+	mockRepo.On("Delete", testID).Return(nil)
+
+	err := interactor.DeleteProfile(testID)
+
+	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}

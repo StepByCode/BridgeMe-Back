@@ -17,4 +17,8 @@
 このプロジェクトは、NFCキーホルダーをスマホにかざすとブラウザでプロフィールが表示されるシンプルなサービスです。超MVPとして、コア機能の最速実装を目指します。バックエンドにGo、フロントエンドにReact Nativeを使用し、クリーンアーキテクチャの原則に従い「関心の分離」を徹底します。
 
 ## 作業指示
-話し合いながら指示します。
+開発作業を行う際は、`docs/development.md` を参照してください。
+
+- [x] `openapi.yaml` に `ProfileInput` と `Profile` スキーマを定義する
+- [x] `openapi.yaml` に `PUT /profiles/{id}` (更新) を追加する
+- [x] `openapi.yaml` に `DELETE /profiles/{id}` (削除) を追加する
