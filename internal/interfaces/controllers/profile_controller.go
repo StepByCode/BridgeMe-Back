@@ -27,12 +27,21 @@ func (c *ProfileController) CreateProfile(ctx echo.Context) error {
 		return ctx.String(http.StatusBadRequest, "Invalid request body")
 	}
 
-	profile := &domain.Profile{
-		Name:        *req.Name,
-		Affiliation: *req.Affiliation,
-		Bio:         *req.Bio,
-		InstagramID: *req.InstagramId,
-		TwitterID:   *req.TwitterId,
+	profile := &domain.Profile{}
+	if req.Name != nil {
+		profile.Name = *req.Name
+	}
+	if req.Affiliation != nil {
+		profile.Affiliation = *req.Affiliation
+	}
+	if req.Bio != nil {
+		profile.Bio = *req.Bio
+	}
+	if req.InstagramId != nil {
+		profile.InstagramID = *req.InstagramId
+	}
+	if req.TwitterId != nil {
+		profile.TwitterID = *req.TwitterId
 	}
 
 	createdProfile, err := c.Interactor.CreateProfile(profile)
@@ -81,4 +90,46 @@ func (c *ProfileController) GetProfiles(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, res)
+}
+
+func (c *ProfileController) UpdateProfile(ctx echo.Context, id openapi_types.UUID) error {
+	var req generated.UpdateProfileJSONRequestBody
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.String(http.StatusBadRequest, "Invalid request body")
+	}
+
+	profile := &domain.Profile{}
+	if req.Name != nil {
+		profile.Name = *req.Name
+	}
+	if req.Affiliation != nil {
+		profile.Affiliation = *req.Affiliation
+	}
+	if req.Bio != nil {
+		profile.Bio = *req.Bio
+	}
+	if req.InstagramId != nil {
+		profile.InstagramID = *req.InstagramId
+	}
+	if req.TwitterId != nil {
+		profile.TwitterID = *req.TwitterId
+	}
+
+	updatedProfile, err := c.Interactor.UpdateProfile(id.String(), profile)
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, "Failed to update profile")
+	}
+	if updatedProfile == nil {
+		return ctx.String(http.StatusNotFound, "Profile not found")
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]string{"id": updatedProfile.ID})
+}
+
+func (c *ProfileController) DeleteProfile(ctx echo.Context, id openapi_types.UUID) error {
+	err := c.Interactor.DeleteProfile(id.String())
+	if err != nil {
+		return ctx.String(http.StatusInternalServerError, "Failed to delete profile")
+	}
+	return ctx.NoContent(http.StatusNoContent)
 }

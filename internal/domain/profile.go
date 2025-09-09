@@ -16,4 +16,5 @@ type Profile struct {
 	InstagramID string
 	TwitterID   string
 	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

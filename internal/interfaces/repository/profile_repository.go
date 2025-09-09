@@ -58,3 +58,21 @@ func (r *ProfileRepositoryImpl) FindAll() ([]*domain.Profile, error) {
 
 	return profiles, nil
 }
+
+func (r *ProfileRepositoryImpl) Update(profile *domain.Profile) error {
+	_, err := r.Collection.ReplaceOne(context.Background(), bson.M{"id": profile.ID}, profile)
+	if err != nil {
+		log.Printf("Error updating profile: %v", err)
+		return err
+	}
+	return nil
+}
+
+func (r *ProfileRepositoryImpl) Delete(id string) error {
+	_, err := r.Collection.DeleteOne(context.Background(), bson.M{"id": id})
+	if err != nil {
+		log.Printf("Error deleting profile: %v", err)
+		return err
+	}
+	return nil
+}

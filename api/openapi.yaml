@@ -108,4 +108,122 @@ paths:
             application/json:
               schema:
                 type: string
+    put:
+      summary: プロフィールを更新する
+      description: 指定したIDのプロフィール情報を更新します
+      operationId: updateProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: プロフィールのUUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '200':
+          description: 更新されたプロフィールのIDを返します
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: プロフィールのUUID
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: 見つかりません
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: string
+    delete:
+      summary: プロフィールを削除する
+      description: 指定したIDのプロフィールを削除します
+      operationId: deleteProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: プロフィールのUUID
+      responses:
+        '204':
+          description: 削除成功（コンテンツなし）
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                type: string
+        '404':
+          description: 見つかりません
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: string
 components:
+  schemas:
+    ProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        affiliation:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        instagramId:
+          type: string
+          nullable: true
+        twitterId:
+          type: string
+          nullable: true
+    UpdateProfileJSONRequestBody:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        affiliation:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        instagramId:
+          type: string
+          nullable: true
+        twitterId:
+          type: string
+          nullable: true
